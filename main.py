@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-from inky import InkyPHAT
+#from inky import InkyPHAT
+from inky.auto import auto
 from PIL import ImageFont, ImageDraw, Image
 import textwrap
 import requests
@@ -15,7 +16,7 @@ import logging
 import os
 import sys
 import stockquotes
-
+import socket
 
 # Election
 from urllib.request import urlopen
@@ -59,9 +60,10 @@ journalctl -f
 '''
 
 # Display Setup
-inky_display = InkyPHAT('red')
+#inky_display = InkyPHAT('yellow')
+inky_display = auto(ask_user=True, verbose=True)
 
-inky_display.set_border(inky_display.RED)
+inky_display.set_border(inky_display.YELLOW)
 
 img = Image.new("P", (inky_display.WIDTH, inky_display.HEIGHT))
 draw = ImageDraw.Draw(img)
@@ -121,7 +123,7 @@ def drawClean(color):
     draw.rectangle((0, 0, inky_display.WIDTH,
                         inky_display.HEIGHT), 
                         (inky_display.BLACK))
-  elif color == 'RED':
+  elif color == 'YELLOW':
     draw.rectangle((0, 0, inky_display.WIDTH,
                         inky_display.HEIGHT), 
                         (inky_display.RED))
@@ -133,6 +135,8 @@ def drawClean(color):
 def drawScreen():
   inky_display.set_image(img.rotate(180))
   inky_display.show()
+  time.sleep(30)
+
 
 
 def getWeather():
@@ -182,7 +186,7 @@ def getCovid():
       todayCovid - yesterdayCovid) + " new hospitalizations"
   newCases = "{:,}".format(jsonResponse[0]["positiveIncrease"]) + " new positivity"
   covidUpdate = datetime.now().strftime('%a %b %d %-I:%M %p')
-  draw.text((0, 0), "CO Covid Update", inky_display.BLACK, bigFont)
+  draw.text((0, 0), "{config[2]} Covid Update", inky_display.BLACK, bigFont)
   draw.text((0, 20), currentlyHospitalized, inky_display.BLACK, bigFont)
   draw.text((0, 40), hospitalizationChange, inky_display.RED, bigFont)
   draw.text((0, 60), newCases, inky_display.RED, bigFont)
@@ -251,10 +255,10 @@ def getHackerNews():
     time.sleep(60)
 
 
-def getPihole():
+def getPihole(hostname = 'pi.hole', port = 80, http_scheme = 'http'):
   drawClean('BLACK')
 
-  piholeResponse = fetchFeed('http://pi.hole/admin/api.php')
+  piholeResponse = fetchFeed(http_scheme + '://' + hostname + ':' + str(port) + '/admin/api.php')
   printPercentBlockedToday = "PiHoled: " + str(round(piholeResponse["ads_percentage_today"])) + " %"
   printClientsSeen = "Total Clients: " + str(piholeResponse["clients_ever_seen"])
   printQueriesToday = "Queries Today: {:,}".format(piholeResponse['dns_queries_today'])
@@ -268,8 +272,13 @@ def getPihole():
 
   # Get Public IP, both work.
   #ipResponse = fetchFeed('https://api.ipify.org?format=json')
-  ipResponse = fetchFeed('https://icanhazip.com')
-  
+  if hostname != 'pi.hole':
+     ipResponse = socket.gethostbyname(hostname)
+     printHostname = "Hostnamme: " + hostname
+     draw.text((0, 100), printHostname, inky_display.YELLOW, bigFont)
+  else:
+     ipResponse = fetchFeed('https://icanhazip.com')
+
   printIpResonse = "Public IP: " + ipResponse
   draw.text((0, 80), printIpResonse, inky_display.WHITE, bigFont)
   
@@ -347,6 +356,13 @@ config = getConfig()
 while True:
   try:
     currentTime = ((datetime.now()).hour)
+    getPihole('vpn.ctptech.dev', 8443, 'https')
+    getPihole('aws.ctptech.dev', 8443, 'https')
+    getPihole('home.ctptech.dev', 8443, 'https')
+    getWeather()
+    getCovid()
+    getStocks()
+    getHackerNews()
     getElection()
     if currentTime in covidHours:
       getCovid()

@@ -1,0 +1,12 @@
+[Unit]
+Description = Display Feeds on eInk
+After = network.target
+
+[Service]
+User=pi
+ExecStart = /usr/bin/python3 /home/pi/inkydash/main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy = multi-user.target

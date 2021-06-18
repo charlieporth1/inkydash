@@ -1,9 +1,12 @@
 ---
 - name: Config Setup of App Options
-  zip: "80211"
+  zip: "55436"
   country: 'US'
-  state: 'CO'
+  state: 'MN'
   stocks: 
+    - 'PLNT'
+    - 'GOOGL'
+    - 'MMM'
     - 'KR'
     - 'F' 
     - 'TWTR'
