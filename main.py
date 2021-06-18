@@ -186,7 +186,7 @@ def getCovid():
       todayCovid - yesterdayCovid) + " new hospitalizations"
   newCases = "{:,}".format(jsonResponse[0]["positiveIncrease"]) + " new positivity"
   covidUpdate = datetime.now().strftime('%a %b %d %-I:%M %p')
-  draw.text((0, 0), "{config[2]} Covid Update", inky_display.BLACK, bigFont)
+  draw.text((0, 0), {config[2]} + " Covid Update", inky_display.YELLOW, bigFont)
   draw.text((0, 20), currentlyHospitalized, inky_display.BLACK, bigFont)
   draw.text((0, 40), hospitalizationChange, inky_display.RED, bigFont)
   draw.text((0, 60), newCases, inky_display.RED, bigFont)
@@ -359,11 +359,15 @@ while True:
     getPihole('vpn.ctptech.dev', 8443, 'https')
     getPihole('aws.ctptech.dev', 8443, 'https')
     getPihole('home.ctptech.dev', 8443, 'https')
-    getWeather()
+    getWeather
     getCovid()
+    getWeather()
     getStocks()
+    getWeather()
     getHackerNews()
+    getWeather()
     getElection()
+    getWeather()
     if currentTime in covidHours:
       getCovid()
       time.sleep(180)
