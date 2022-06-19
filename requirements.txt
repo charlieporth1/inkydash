@@ -3,9 +3,9 @@ inky
 pillow
 pyyaml
 requests
-json
-textwrap
+#json
+#textwrap
 stockquotes # if using stock
 bs4 # if using stock
 lxml # if using stock
-#noass_sdk # if using weather
+noaa-sdk # if using weather
