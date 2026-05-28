@@ -1,0 +1,17 @@
+#!/bin/bash
+
+apt update
+apt install -y python3
+apt install -y python3-dev
+apt install -y python3-pip
+apt install -y python3-bs4
+apt install -y python3-numpy
+
+SCRIPT_DIR=`realpath .`
+cp -rf $SCRIPT_DIR/fonts /usr/share/fonts/truetype/
+cp -rf $SCRIPT_DIR/einky.service /etc/systemd/system/
+pip3 install -r $SCRIPT_DIR/requirements.txt --break-system-packages
+
+sudo systemctl daemon-reload
+sudo systemctl enable einky.service
+sudo systemctl start einky.service

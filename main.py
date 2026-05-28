@@ -132,6 +132,7 @@ def drawClean(color):
                         inky_display.HEIGHT), 
                         (inky_display.WHITE))
 
+
 def drawScreen():
   inky_display.set_image(img.rotate(180))
   inky_display.show()
@@ -149,7 +150,10 @@ def getWeather():
         txt = textwrap.fill(res1day, 36)
 
         # Get size of text
-        w, h = draw.multiline_textsize(txt, font)
+        # w, h = draw.multiline_textsize(txt, font)
+        left, top, right, bottom = draw.multiline_textbbox((0, 0), txt, font=bigFont)
+        w = right - left
+        h = bottom - top
 
         # Center Center the text
         x = (inky_display.WIDTH / 2) - (w / 2)
@@ -284,31 +288,107 @@ def getPihole(hostname = 'pi.hole', port = 80, http_scheme = 'http'):
   
   drawScreen()
 
+
+def get_yahoo_session_and_crumb():
+    """Simulates a browser session to grab Yahoo's required security cookies and crumb."""
+    session = requests.Session()
+    # Mimic a clean browser visit
+    session.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        }
+    )
+
+    try:
+        # Step 1: Visit the homepage to receive a tracking/session cookie
+        session.get("https://finance.yahoo.com", timeout=10)
+
+        # Step 2: Request the dynamic security crumb token linked to that cookie
+        crumb_response = session.get(
+            "https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=10
+        )
+        if crumb_response.status_code == 200 and crumb_response.text:
+            return session, crumb_response.text.strip()
+    except Exception as e:
+        print(f"Failed to establish automated session: {e}")
+
+    # Fallback to a basic session if the crumb endpoint fails
+    return session, None
+
 def getStocks():
 
-    stockSymbols = config[3]
+  stockSymbols = config[3]
+  for x in stockSymbols:
+     drawClean('WHITE')
+     HEADERS = {
+         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+     }
+     try:
+        # Utilizing the highly stable v8 chart endpoint
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{x}?interval=1d"
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        data = response.json()
 
+        # Error handling if Yahoo returns bad structure
+        if (
+            not data.get("chart")
+            or not data["chart"]["result"]
+            or data["chart"]["error"] is not None
+        ):
+            print(f"Error fetching data for {x}: {data.get('chart', {}).get('error')}")
+            return
 
-    for x in stockSymbols:
-      drawClean('WHITE')
-      symbolData = stockquotes.Stock(x)
-      printName = symbolData.name + " (" + symbolData.symbol + ")"
-      # Get currnet price, adjust value to have $, comma, and 2 decimal points, also crop photo to show a max char of 7
-      printCurrentPrice = str("${:,.2f}".format(symbolData.current_price))[0:7]
-      printIncreasePercent = str(symbolData.increase_percent) + "%"
-      printHighLow = "H: " + str("${:,.2f}".format(symbolData.historical[0]['high']))[0:7] + " / L: " + str("${:,.2f}".format(symbolData.historical[0]['low']))[0:7]
+        # Navigate the /v8/chart JSON hierarchy
+        result = data["chart"]["result"][0]
+        meta = result["meta"]
+        indicators = result["indicators"]["quote"][0]
 
-      draw.text((0, 20), printName, inky_display.BLACK, bigFont)
-      draw.text((0, 40), printCurrentPrice, inky_display.BLACK, bigFont)
-      if symbolData.increase_percent <= 0:
-        draw.text((68, 40), ("▼ " + printIncreasePercent), inky_display.RED, bigFont)
-      else:
-        draw.text((68, 40), ("▲ " + printIncreasePercent), inky_display.BLACK, bigFont)
-      draw.text((0, 60), printHighLow, inky_display.BLACK, bigFont)
-      
-      drawScreen()
+        # Extract data points
+        current_price = meta.get("regularMarketPrice", 0.0)
+        previous_close = meta.get(
+            "chartPreviousClose", current_price
+        )  # fallback to current if missing
 
-      time.sleep(30)
+        # Calculate daily change percent
+        if previous_close != 0:
+            increase_percent = (
+                (current_price - previous_close) / previous_close
+            ) * 100
+        else:
+            increase_percent = 0.0
+
+        # High/Low for the current period (safely pulling from the last index)
+        high = indicators["high"][-1] if indicators.get("high") else current_price
+        low = indicators["low"][-1] if indicators.get("low") else current_price
+
+        # Fallback strings for presentation
+        printName = f"{x} Stock"  # Note: Chart meta often skips full company names, defaults to symbol layout
+        printCurrentPrice = f"${current_price:,.2f}"[0:7]
+        printIncreasePercent = f"{increase_percent:.2f}%"
+        printHighLow = f"H: {f'${high:,.2f}'[0:7]} / L: {f'${low:,.2f}'[0:7]}"
+
+        # Rendering layout logic
+        draw.text((0, 20), printName, inky_display.BLACK, bigFont)
+        draw.text((0, 40), printCurrentPrice, inky_display.BLACK, bigFont)
+
+        if increase_percent <= 0:
+            draw.text(
+                (68, 40), f" ^v  {printIncreasePercent}", inky_display.RED, bigFont
+            )
+        else:
+            draw.text(
+                (68, 40),
+                f" ^v  {printIncreasePercent}",
+                inky_display.BLACK,
+                bigFont,
+            )
+
+        draw.text((0, 60), printHighLow, inky_display.BLACK, bigFont)
+        drawScreen()
+
+     except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 
@@ -323,7 +403,9 @@ def getElection():
       txt = textwrap.fill(description, 24)
 
       # Get size of text
-      w, h = draw.multiline_textsize(txt, bigFont)
+      left, top, right, bottom = draw.multiline_textbbox((0, 0), txt, font=bigFont)
+      w = right - left
+      h = bottom - top
 
       # Center Center the text
       x = (inky_display.WIDTH / 2) - (w / 2)
@@ -356,35 +438,18 @@ config = getConfig()
 while True:
   try:
     currentTime = ((datetime.now()).hour)
-    getPihole('vpn.ctptech.dev', 8443, 'https')
-    getPihole('aws.ctptech.dev', 8443, 'https')
-    getPihole('home.ctptech.dev', 8443, 'https')
-    getWeather
-    getCovid()
+#    getPihole('vpn.ctptech.dev', 8443, 'https')
+#    getPihole('aws.ctptech.dev', 8443, 'https')
+#    getPihole('home.ctptech.dev', 8443, 'https')
+#    getCovid()
     getWeather()
     getStocks()
-    getWeather()
-    getHackerNews()
-    getWeather()
-    getElection()
-    getWeather()
-    if currentTime in covidHours:
-      getCovid()
-      time.sleep(180)
-    if currentTime in stockHours:
-      getStocks()
-    if currentTime in hnHours:
-      getHackerNews()
-    if currentTime in piHours:
-      getPihole()
-      time.sleep(180)
     getCurrentConditions()
-    time.sleep(180)
-    if currentTime in forecastHours:
-      getWeather()
-      time.sleep(180)
-  except (KeyboardInterrupt, SystemExit):
+#    getHackerNews()
+#    getElection()
+  except (KeyboardInterrupt, SystemExit, Exception) as e:
     print('\nkeyboardinterrupt found!')
+    print(e)
     sys.exit(0)
     print('\n...Program Stopped Manually!')
     raise

@@ -1,18 +1,18 @@
 ---
 - name: Config Setup of App Options
-  zip: "55436"
+  zip: "55343"
   country: 'US'
   state: 'MN'
-  stocks: 
-    - 'PLNT'
+  stocks:
     - 'GOOGL'
     - 'MMM'
     - 'KR'
-    - 'F' 
+    - 'F'
+    - 'NIO'
+    - 'NKO'
+    - 'ABT'
+    - 'PLNT'
     - 'TWTR'
-    - 'RKT'
-    - 'FSLY' 
-    - 'CCO'
     - '^IXIC'
     - '^DJI'
     - '^GSPC'
