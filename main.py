@@ -386,6 +386,7 @@ def getStocks():
 
         draw.text((0, 60), printHighLow, inky_display.BLACK, bigFont)
         drawScreen()
+        time.sleep(20)
 
      except Exception as e:
         print(f"An error occurred: {e}")
